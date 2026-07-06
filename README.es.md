@@ -151,8 +151,6 @@ Valores disponibles para `OnExpired`:
 
 ## Changelog 1.1.0
 
-En curso.
-
 - Refactorizado el sistema servidor en servicios centrados en comandos, prompts de alquiler, pagos, persistencia, expiraciones, matching de claims, registro de privilegios y flujo de interaccion.
 - Refactorizado el manejo cliente de prompts en componentes mas pequenos de red y dialogo.
 - Mejorada la documentacion del proyecto con un README orientado al uso real.

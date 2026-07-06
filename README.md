@@ -151,8 +151,6 @@ Available `OnExpired` values:
 
 ## Changelog 1.1.0
 
-In progress.
-
 - Refactored the server mod system into focused services for commands, prompts, payments, persistence, expirations, claim matching, privilege registration and interaction flow.
 - Refactored client-side prompt handling into smaller network and dialog components.
 - Improved project documentation with a practical README.
