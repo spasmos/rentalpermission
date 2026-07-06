@@ -1,0 +1,13 @@
+# .NET build outputs
+bin/
+obj/
+*.pdb
+
+# Vintage Story mod packages
+*.zip
+
+# Local/editor noise
+.vs/
+.vscode/
+*.user
+*.suo

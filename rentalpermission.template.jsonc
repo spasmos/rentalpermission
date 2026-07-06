@@ -1,0 +1,131 @@
+﻿{
+  // RentalPermission template
+  // Copy the parts you need into ModConfig/rentalpermission.json after the first server start.
+  // First matching claim rule and rental rule wins.
+  // Charges and registers rentals when reinforcing or locking configured blocks.
+  // Expiration actions are processed automatically when EnableExpirationProcessing is true.
+  // Safe first value for OnExpired: WarnOnly.
+
+  "CurrencyItemCode": "game:gear-rusty",
+  // Configurable conversion for durations expressed in in-game months or years.
+  // If a rule uses RentDurationUnit = "months": 1 month = DaysPerMonth in-game days.
+  // If a rule uses RentDurationUnit = "years": 1 year = DaysPerMonth * MonthsPerYear in-game days.
+  "DaysPerMonth": 30,
+  "MonthsPerYear": 12,
+  "LogRentalEvents": true,
+  // Enable only while diagnosing configuration issues. It can be noisy on busy servers.
+  "LogIgnoredInteractions": false,
+
+  // Checks expired rentals every N real-time seconds.
+  // For production, 60-300 is usually fine. For short tests, use 5-10.
+  "EnableExpirationProcessing": true,
+  "ExpirationCheckIntervalSeconds": 300,
+  // Batch limit per check, useful to avoid a large cleanup spike after downtime.
+  "MaxExpirationsPerCheck": 20,
+  // Deletes already processed rentals after N in-game hours.
+  // 24 keeps a small review window. 0 deletes them on the next pass. -1 never deletes.
+  "DeleteProcessedRentalsAfterHours": 24,
+
+  "Claims": [
+    {
+      "Name": "Starter city rentals",
+      "Enabled": true,
+
+      // Leave all filters empty to apply this rule to every claim.
+      // Recommended for stable setups: save claims with a clear description/name
+      // and target them with AllowedClaimDescriptions. Even if claim management tools ask
+      // for a description when saving, avoid generic or hard-to-identify descriptions.
+      //
+      // AllowedClaimIds uses the same per-owner claim id shown by vanilla /land list.
+      // It is convenient, but it can change if claims are deleted/recreated because
+      // the visible id is based on claim order, not a permanent GUID.
+      // Example: if /land list shows "1: Market", add 1 to AllowedClaimIds.
+      "AllowedClaimIds": [],
+      "AllowedClaimOwnerNames": [],
+      // Example for a specific claim: [ "Starter City Market" ]
+      "AllowedClaimDescriptions": [],
+
+      "Rules": [
+        {
+          "Name": "Market chests",
+          "Enabled": true,
+
+          // Charge when reinforcing and/or locking a matching block.
+          "RentOnReinforce": true,
+          "RentOnLock": true,
+
+          // If true, players without BuildOrBreak can still rent when they have this privilege.
+          "AllowDelegatedRental": true,
+          "RentalPrivilegeCode": "rentblocks",
+          "RequireUseAccess": true,
+
+          // How to find block codes:
+          // - Codes come from game or mod asset JSON files, not from translations.
+          // - In a normal install, check:
+          //   C:/Users/<user>/AppData/Roaming/Vintagestory/assets/**/blocktypes/**/*.json
+          // - The JSON code field is the base code. Vanilla blocks use the game: domain.
+          //   Examples: survival/blocktypes/wood/chest.json -> code "chest" -> game:chest-...
+          //             survival/blocktypes/wood/chest-labeled.json -> code "labeledchest" -> game:labeledchest-...
+          //             survival/blocktypes/wood/chest-trunk.json -> code "trunk" -> game:trunk-...
+          // - Block variants, such as type and orientation, are appended to the final code.
+          //   That is why BlockCodePrefixes uses "game:labeledchest-" to cover all variants.
+          // - assets/*/lang/*.json files are useful for visible names, but their block-...
+          //   translation keys do not always match the block code literally.
+          "BlockCodePrefixes": [
+            "game:chest-",
+            "game:labeledchest-",
+            "game:trunk-"
+          ],
+          // BlockCodes uses exact block codes, not prefixes.
+          // Use it when you want to allow only one specific variant.
+          // Example: "game:labeledchest-east" would allow only that exact orientation.
+          // For families with variants, BlockCodePrefixes is usually more convenient.
+          "BlockCodes": [],
+
+          // In-game time unit for RentDuration, MinRentDuration and RentDurationStep.
+          // Valid values: "hours", "days", "months", "years".
+          "RentDurationUnit": "days",
+          // Maximum/default rental duration in the selected unit.
+          // BasePrice applies to this full duration.
+          "RentDuration": 7,
+          // Minimum selectable rental duration in the selected unit.
+          // Set equal to RentDuration to offer only one duration.
+          "MinRentDuration": 7,
+          // Selection step in the selected unit. Example: 1 with unit "days" allows day-by-day choices.
+          // 0 means no intermediate steps when min and max are equal.
+          "RentDurationStep": 0,
+          "BasePrice": 10,
+          "RenewalPrice": 10,
+          // Prepaid renewal must be paid in-world by interacting with the rented block.
+          // Only one prepaid renewal can be pending per rental.
+          "IncrementalPricePerExistingRental": 5,
+          "MaxActiveRentalsPerPlayer": 3,
+
+          // Expiration actions:
+          // DoNothing: mark the rental expired, do not touch the block.
+          // WarnOnly: mark expired and notify the player if online.
+          // UnlockOnly: remove the lock flag from the reinforcement data.
+          // RemoveReinforcement: clear the reinforcement data at this block position.
+          // UnlockAndRemoveReinforcement: remove the lock if present, then clear the reinforcement.
+          "OnExpired": "UnlockAndRemoveReinforcement",
+
+          // Optional CANMarket support for market claims.
+          // When enabled, this resets one nearby CANMarket stall after an expired rental runs
+          // UnlockAndRemoveReinforcement. The reset physically replaces the same stall block
+          // in place, clearing its block entity state so the next renter can use it.
+          //
+          // Keep this enabled only in tightly controlled market rules.
+          // If MarketStallRequireUniqueMatch is true, the reset is skipped unless exactly
+          // one matching stall is found within MarketStallSearchRadiusBlocks.
+          "MarketResetEnabled": false,
+          "MarketStallBlockCodePrefixes": [
+            "canmarket:canstall"
+          ],
+          "MarketStallBlockCodes": [],
+          "MarketStallSearchRadiusBlocks": 5,
+          "MarketStallRequireUniqueMatch": true
+        }
+      ]
+    }
+  ]
+}

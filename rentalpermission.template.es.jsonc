@@ -1,0 +1,135 @@
+{
+  // Plantilla de RentalPermission
+  // Copia las partes que necesites a ModConfig/rentalpermission.json despues del primer arranque del servidor.
+  // Gana la primera regla de claim y la primera regla de alquiler coincidente.
+  // Cobra y registra alquileres al reforzar o bloquear con candado bloques configurados.
+  // Las acciones de expiracion se procesan automaticamente si EnableExpirationProcessing esta en true.
+  // Valor seguro inicial para OnExpired: WarnOnly.
+
+  "CurrencyItemCode": "game:gear-rusty",
+  // Conversion configurable para duraciones expresadas en meses o anos de juego.
+  // Si una regla usa RentDurationUnit = "months": 1 mes = DaysPerMonth dias de juego.
+  // Si una regla usa RentDurationUnit = "years": 1 ano = DaysPerMonth * MonthsPerYear dias de juego.
+  "DaysPerMonth": 30,
+  "MonthsPerYear": 12,
+  "LogRentalEvents": true,
+
+  // Activar solo mientras diagnosticas problemas de configuracion.
+  // Puede generar mucho log en servidores con actividad.
+  "LogIgnoredInteractions": false,
+
+  // Comprueba alquileres expirados cada N segundos reales.
+  // Para produccion, 60-300 suele estar bien. Para pruebas cortas, usa 5-10.
+  "EnableExpirationProcessing": true,
+  "ExpirationCheckIntervalSeconds": 300,
+  // Limite por tanda para evitar picos grandes de limpieza tras una parada del servidor.
+  "MaxExpirationsPerCheck": 20,
+  // Borra alquileres ya procesados despues de N horas de juego.
+  // 24 conserva un pequeño margen de revision. 0 los borra en la siguiente pasada. -1 no borra nunca.
+  "DeleteProcessedRentalsAfterHours": 24,
+
+  "Claims": [
+    {
+      "Name": "Alquileres ciudad inicial",
+      "Enabled": true,
+
+      // Deja todos los filtros vacios para aplicar esta regla a cualquier claim.
+      // Recomendado para configuraciones estables: guarda las claims con una descripcion/nombre claro
+      // y apuntalas con AllowedClaimDescriptions. Aunque las herramientas de gestion pueden pedir
+      // descripcion al guardar, evita descripciones genericas o dificiles de identificar.
+      //
+      // AllowedClaimIds usa el mismo id por propietario que muestra vanilla con /land list.
+      // Es comodo, pero puede cambiar si se borran o recrean claims porque el id visible
+      // se basa en el orden de las claims, no en un GUID permanente.
+      // Ejemplo: si /land list muestra "1: Mercado", anade 1 a AllowedClaimIds.
+      "AllowedClaimIds": [],
+      "AllowedClaimOwnerNames": [],
+
+      // Ejemplo para una claim concreta: [ "Mercado ciudad inicial" ]
+      "AllowedClaimDescriptions": [],
+
+      "Rules": [
+        {
+          "Name": "Cofres de mercado",
+          "Enabled": true,
+
+          // Cobra al reforzar y/o bloquear con candado un bloque coincidente.
+          "RentOnReinforce": true,
+          "RentOnLock": true,
+
+          // Si esta en true, jugadores sin BuildOrBreak pueden alquilar si tienen este privilegio.
+          "AllowDelegatedRental": true,
+          "RentalPrivilegeCode": "rentblocks",
+          "RequireUseAccess": true,
+
+          // Como encontrar codigos de bloques:
+          // - Los codigos salen de los JSON de assets del juego o mods, no de las traducciones.
+          // - En una instalacion normal puedes mirar:
+          //   C:/Users/<usuario>/AppData/Roaming/Vintagestory/assets/**/blocktypes/**/*.json
+          // - El campo code del JSON es la base del codigo. En vanilla el dominio es game:.
+          //   Ejemplos: survival/blocktypes/wood/chest.json -> code "chest" -> game:chest-...
+          //             survival/blocktypes/wood/chest-labeled.json -> code "labeledchest" -> game:labeledchest-...
+          //             survival/blocktypes/wood/chest-trunk.json -> code "trunk" -> game:trunk-...
+          // - Las variantes del bloque, como tipo y orientacion, se anaden al codigo final.
+          //   Por eso BlockCodePrefixes usa "game:labeledchest-" para cubrir todas sus variantes.
+          // - Los ficheros assets/*/lang/*.json sirven para nombres visibles, pero sus claves
+          //   block-... no siempre coinciden literalmente con el codigo de bloque.
+          "BlockCodePrefixes": [
+            "game:chest-",
+            "game:labeledchest-",
+            "game:trunk-"
+          ],
+          // BlockCodes usa codigos exactos de bloque, no prefijos.
+          // Utilizalo cuando quieras permitir solo una variante concreta.
+          // Ejemplo: "game:labeledchest-east" permitiria solo esa orientacion exacta.
+          // Para familias con variantes, normalmente es mas comodo usar BlockCodePrefixes.
+          "BlockCodes": [],
+
+          // Unidad de tiempo de juego para RentDuration, MinRentDuration y RentDurationStep.
+          // Valores validos: "hours", "days", "months", "years".
+          "RentDurationUnit": "days",
+          // Duracion maxima/por defecto del alquiler en la unidad elegida.
+          // BasePrice se aplica a esta duracion completa.
+          "RentDuration": 7,
+          // Duracion minima seleccionable del alquiler en la unidad elegida.
+          // Pon el mismo valor que RentDuration para ofrecer una sola duracion.
+          "MinRentDuration": 7,
+          // Paso de seleccion en la unidad elegida. Ejemplo: 1 con unit "days" permite elegir dia a dia.
+          // 0 significa sin pasos intermedios cuando minimo y maximo son iguales.
+          "RentDurationStep": 0,
+          "BasePrice": 10,
+          "RenewalPrice": 10,
+          // La renovacion anticipada solo se puede pagar presencialmente interactuando con el bloque alquilado.
+          // Solo se permite una renovacion anticipada pendiente por alquiler.
+          "IncrementalPricePerExistingRental": 5,
+          "MaxActiveRentalsPerPlayer": 3,
+
+          // Acciones de expiracion:
+          // DoNothing: marca el alquiler como expirado, no toca el bloque.
+          // WarnOnly: marca como expirado y avisa al jugador si esta conectado.
+          // UnlockOnly: elimina el estado de candado de los datos de refuerzo.
+          // RemoveReinforcement: elimina los datos de refuerzo en esa posicion.
+          // UnlockAndRemoveReinforcement: quita el candado si existe y elimina el refuerzo.
+          "OnExpired": "UnlockAndRemoveReinforcement",
+
+          // Soporte opcional para CANMarket en claims de mercado.
+          // Si se activa, reinicia un puesto CANMarket cercano despues de que un alquiler
+          // expirado ejecute UnlockAndRemoveReinforcement. El reinicio reemplaza fisicamente
+          // el mismo bloque de puesto en su posicion, limpiando su block entity para que
+          // el siguiente inquilino pueda usarlo.
+          //
+          // Activar solo en reglas de mercado muy acotadas.
+          // Si MarketStallRequireUniqueMatch esta en true, se omite el reinicio salvo que
+          // haya exactamente un puesto coincidente dentro de MarketStallSearchRadiusBlocks.
+          "MarketResetEnabled": false,
+          "MarketStallBlockCodePrefixes": [
+            "canmarket:canstall"
+          ],
+          "MarketStallBlockCodes": [],
+          "MarketStallSearchRadiusBlocks": 5,
+          "MarketStallRequireUniqueMatch": true
+        }
+      ]
+    }
+  ]
+}
